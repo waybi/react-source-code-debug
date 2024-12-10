@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import State from './components/State'
-import LanesDemo from './components/LanesDemo'
-import AppSibling from './components/AppSibling'
-import TasksWithDifferentPriorities from './components/TasksWithDifferentPriorities'
-import SchedulerTask from './components/SchedulerTask'
-import Concurrent from './components/ConcurrentInput'
-import Diff from './components/Diff'
-import PropsDiff from './components/PropsDiff'
+import React, { useState } from "react";
+import State from "./components/State";
+import LanesDemo from "./components/LanesDemo";
+import AppSibling from "./components/AppSibling";
+import TasksWithDifferentPriorities from "./components/TasksWithDifferentPriorities";
+import SchedulerTask from "./components/SchedulerTask";
+import Concurrent from "./components/ConcurrentInput";
+import { Diff } from "./components/Diff";
+import PropsDiff from "./components/PropsDiff";
 import Hooks from "./components/Hooks";
 import EventDemo from "./components/EventDemo";
 import ContextDemo from "./components/Context";
-import './App.css';
+import "./App.css";
 
 // propsDiff
 /*class App extends React.Component {
@@ -19,6 +19,7 @@ import './App.css';
   }
 }*/
 function App() {
+  // return <State />;
 
   // 事件系统
   // return <EventDemo/>
@@ -36,13 +37,13 @@ function App() {
   // return <SchedulerTask/>
 
   // 高优先级插队
-  return <TasksWithDifferentPriorities/>
+  // return <TasksWithDifferentPriorities />;
 
   // context
   // return <ContextDemo/>
 
   // diff 算法
-  // return <Diff ref={'diffRef'}/>
+  return <Diff />;
 }
 
 export default App;

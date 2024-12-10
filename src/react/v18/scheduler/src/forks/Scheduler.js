@@ -16,9 +16,9 @@ import {
   frameYieldMs,
   continuousYieldMs,
   maxYieldMs,
-} from '../SchedulerFeatureFlags';
+} from "../SchedulerFeatureFlags";
 
-import {push, pop, peek} from '../SchedulerMinHeap';
+import { push, pop, peek } from "../SchedulerMinHeap";
 
 // TODO: Use symbols?
 import {
@@ -27,7 +27,7 @@ import {
   NormalPriority,
   LowPriority,
   IdlePriority,
-} from '../SchedulerPriorities';
+} from "../SchedulerPriorities";
 import {
   markTaskRun,
   markTaskYield,
@@ -39,14 +39,14 @@ import {
   markTaskStart,
   stopLoggingProfilingEvents,
   startLoggingProfilingEvents,
-} from '../SchedulerProfiling';
+} from "../SchedulerProfiling";
 import {
   unstable_setDisableYieldValue,
-  unstable_yieldValue
-} from './SchedulerMock'
+  unstable_yieldValue,
+} from "./SchedulerMock";
 let getCurrentTime;
 const hasPerformanceNow =
-  typeof performance === 'object' && typeof performance.now === 'function';
+  typeof performance === "object" && typeof performance.now === "function";
 
 if (hasPerformanceNow) {
   const localPerformance = performance;
@@ -91,20 +91,20 @@ var isHostCallbackScheduled = false;
 var isHostTimeoutScheduled = false;
 
 // Capture local references to native APIs, in case a polyfill overrides them.
-const localSetTimeout = typeof setTimeout === 'function' ? setTimeout : null;
+const localSetTimeout = typeof setTimeout === "function" ? setTimeout : null;
 const localClearTimeout =
-  typeof clearTimeout === 'function' ? clearTimeout : null;
+  typeof clearTimeout === "function" ? clearTimeout : null;
 const localSetImmediate =
-  typeof setImmediate !== 'undefined' ? setImmediate : null; // IE and Node.js + jsdom
+  typeof setImmediate !== "undefined" ? setImmediate : null; // IE and Node.js + jsdom
 
 const isInputPending =
-  typeof navigator !== 'undefined' &&
+  typeof navigator !== "undefined" &&
   navigator.scheduling !== undefined &&
   navigator.scheduling.isInputPending !== undefined
     ? navigator.scheduling.isInputPending.bind(navigator.scheduling)
     : null;
 
-const continuousOptions = {includeContinuous: enableIsInputPendingContinuous};
+const continuousOptions = { includeContinuous: enableIsInputPendingContinuous };
 
 function advanceTimers(currentTime) {
   // Check for tasks that are no longer delayed and add them to the queue.
@@ -205,7 +205,7 @@ function workLoop(hasTimeRemaining, initialTime) {
       break;
     }
     const callback = currentTask.callback;
-    if (typeof callback === 'function') {
+    if (typeof callback === "function") {
       currentTask.callback = null;
       currentPriorityLevel = currentTask.priorityLevel;
       const didUserCallbackTimeout = currentTask.expirationTime <= currentTime;
@@ -214,7 +214,7 @@ function workLoop(hasTimeRemaining, initialTime) {
       }
       const continuationCallback = callback(didUserCallbackTimeout);
       currentTime = getCurrentTime();
-      if (typeof continuationCallback === 'function') {
+      if (typeof continuationCallback === "function") {
         currentTask.callback = continuationCallback;
         if (enableProfiling) {
           markTaskYield(currentTask, currentTime);
@@ -295,7 +295,7 @@ function unstable_next(eventHandler) {
 
 function unstable_wrapCallback(callback) {
   var parentPriorityLevel = currentPriorityLevel;
-  return function() {
+  return function () {
     // This is a fork of runWithPriority, inlined for performance.
     var previousPriorityLevel = currentPriorityLevel;
     currentPriorityLevel = parentPriorityLevel;
@@ -309,83 +309,129 @@ function unstable_wrapCallback(callback) {
 }
 
 function unstable_scheduleCallback(priorityLevel, callback, options) {
+  // 获取当前时间戳
   var currentTime = getCurrentTime();
   var startTime;
-  if (typeof options === 'object' && options !== null) {
+
+  /**
+   * 任务开始调度的时间。options 是一个可选参数，
+   * 其中包含一个 delay 属性，表示这是一个延时任务，
+   * 要延迟多少毫秒后再安排执行。
+   */
+  // 处理可选的选项参数
+  if (typeof options === "object" && options !== null) {
     var delay = options.delay;
-    if (typeof delay === 'number' && delay > 0) {
+    if (typeof delay === "number" && delay > 0) {
+      // 如果设置了延迟，则计算任务的开始时间为当前时间加上延迟时间
       startTime = currentTime + delay;
     } else {
+      // 否则，任务立即开始
       startTime = currentTime;
     }
   } else {
+    // 如果没有提供选项，任务立即开始
     startTime = currentTime;
   }
 
+  /**
+   * timeout 根据优先级设置，表示这个任务可以被延迟执行的最长时间。
+   * 不同的优先级对应不同的超时时间。
+   */
   var timeout;
+
+  // 根据优先级设置任务的超时时间
   switch (priorityLevel) {
     case ImmediatePriority:
-      timeout = IMMEDIATE_PRIORITY_TIMEOUT;
+      timeout = IMMEDIATE_PRIORITY_TIMEOUT; // 最高优先级
       break;
     case UserBlockingPriority:
-      timeout = USER_BLOCKING_PRIORITY_TIMEOUT;
+      timeout = USER_BLOCKING_PRIORITY_TIMEOUT; // 用户阻塞优先级
       break;
     case IdlePriority:
-      timeout = IDLE_PRIORITY_TIMEOUT;
+      timeout = IDLE_PRIORITY_TIMEOUT; // 空闲优先级
       break;
     case LowPriority:
-      timeout = LOW_PRIORITY_TIMEOUT;
+      timeout = LOW_PRIORITY_TIMEOUT; // 低优先级
       break;
     case NormalPriority:
     default:
-      timeout = NORMAL_PRIORITY_TIMEOUT;
+      timeout = NORMAL_PRIORITY_TIMEOUT; // 普通优先级
       break;
   }
 
+  /**
+   * expirationTime 表示任务的过期时间。
+   * 过期时间越小，任务越紧急，需要越快执行。
+   */
   var expirationTime = startTime + timeout;
 
+  /**
+   * 创建一个新的任务对象。
+   * sortIndex 用于任务排序，值越小的任务优先级越高。
+   */
   var newTask = {
-    id: taskIdCounter++,
-    callback,
-    priorityLevel,
-    startTime,
-    expirationTime,
-    sortIndex: -1,
+    id: taskIdCounter++, // 任务的唯一标识符
+    callback, // 任务的回调函数
+    priorityLevel, // 任务的优先级
+    startTime, // 任务的开始时间
+    expirationTime, // 任务的过期时间
+    sortIndex: -1, // 用于任务排序的索引，初始为 -1
   };
+
+  // 如果启用了性能分析，则初始化任务的队列状态
   if (enableProfiling) {
     newTask.isQueued = false;
   }
 
+  /**
+   * 如果任务有设置 delay 时间（即 startTime > currentTime），
+   * 则将其放入 timerQueue 中，表示这是一个延迟执行的任务；
+   * 否则，将其放入 taskQueue 中，表示这是一个立即执行的任务。
+   */
   if (startTime > currentTime) {
-    // This is a delayed task.
-    newTask.sortIndex = startTime;
-    push(timerQueue, newTask);
+    // 这是一个延迟任务
+    newTask.sortIndex = startTime; // 使用开始时间作为排序索引，越早的任务排序越靠前
+    push(timerQueue, newTask); // 将任务添加到定时器队列中
+
+    /**
+     * 检查当前是否没有其他任务在任务队列中，
+     * 并且这个任务是定时器队列中最早的任务。
+     * 如果是，则需要调度一个主机超时来在延迟时间后处理该任务。
+     */
     if (peek(taskQueue) === null && newTask === peek(timerQueue)) {
-      // All tasks are delayed, and this is the task with the earliest delay.
       if (isHostTimeoutScheduled) {
-        // Cancel an existing timeout.
+        // 如果已经有一个主机超时被调度，则取消它
         cancelHostTimeout();
       } else {
+        // 标记主机超时已被调度
         isHostTimeoutScheduled = true;
       }
-      // Schedule a timeout.
+      // 调度一个主机超时，在延迟时间后处理任务
       requestHostTimeout(handleTimeout, startTime - currentTime);
     }
   } else {
-    newTask.sortIndex = expirationTime;
-    push(taskQueue, newTask);
+    // 这是一个立即任务
+    // 更新 sortIndex 为过期时间，这样越紧急的任务排序越靠前
+    newTask.sortIndex = expirationTime; // 使用过期时间作为排序索引
+    push(taskQueue, newTask); // 将任务添加到任务队列中
+
     if (enableProfiling) {
+      // 如果启用了性能分析，标记任务的开始
       markTaskStart(newTask, currentTime);
       newTask.isQueued = true;
     }
-    // Schedule a host callback, if needed. If we're already performing work,
-    // wait until the next time we yield.
+
+    /**
+     * 如果当前没有主机回调被调度，并且没有正在执行的工作，
+     * 则调度一个主机回调来处理任务队列中的任务。
+     */
     if (!isHostCallbackScheduled && !isPerformingWork) {
-      isHostCallbackScheduled = true;
-      requestHostCallback(flushWork);
+      isHostCallbackScheduled = true; // 标记主机回调已被调度
+      requestHostCallback(flushWork); // 调度主机回调来刷新工作
     }
   }
 
+  // 返回新创建的任务对象，以便调用者可以进行跟踪和管理
   return newTask;
 }
 
@@ -500,9 +546,9 @@ function requestPaint() {
 function forceFrameRate(fps) {
   if (fps < 0 || fps > 125) {
     // Using console['error'] to evade Babel and ESLint
-    console['error'](
-      'forceFrameRate takes a positive int between 0 and 125, ' +
-        'forcing frame rates higher than 125 fps is not supported',
+    console["error"](
+      "forceFrameRate takes a positive int between 0 and 125, " +
+        "forcing frame rates higher than 125 fps is not supported"
     );
     return;
   }
@@ -550,7 +596,7 @@ const performWorkUntilDeadline = () => {
 };
 
 let schedulePerformWorkUntilDeadline;
-if (typeof localSetImmediate === 'function') {
+if (typeof localSetImmediate === "function") {
   // Node.js and old IE.
   // There's a few reasons for why we prefer setImmediate.
   //
@@ -565,7 +611,7 @@ if (typeof localSetImmediate === 'function') {
   schedulePerformWorkUntilDeadline = () => {
     localSetImmediate(performWorkUntilDeadline);
   };
-} else if (typeof MessageChannel !== 'undefined') {
+} else if (typeof MessageChannel !== "undefined") {
   // DOM and Worker environments.
   // We prefer MessageChannel because of the 4ms setTimeout clamping.
   const channel = new MessageChannel();
@@ -622,7 +668,7 @@ export {
   getCurrentTime as unstable_now,
   forceFrameRate as unstable_forceFrameRate,
   unstable_setDisableYieldValue,
-  unstable_yieldValue
+  unstable_yieldValue,
 };
 
 export const unstable_Profiling = enableProfiling

@@ -7,14 +7,14 @@
  * @flow
  */
 
-import type {SchedulerCallback} from './Scheduler';
+import type { SchedulerCallback } from "./Scheduler";
 
 import {
   DiscreteEventPriority,
   getCurrentUpdatePriority,
   setCurrentUpdatePriority,
-} from './ReactEventPriorities.old';
-import {ImmediatePriority, scheduleCallback} from './Scheduler';
+} from "./ReactEventPriorities.old";
+import { ImmediatePriority, scheduleCallback } from "./Scheduler";
 
 let syncQueue: Array<SchedulerCallback> | null = null;
 let includesLegacySyncCallbacks: boolean = false;
@@ -49,35 +49,41 @@ export function flushSyncCallbacksOnlyInLegacyMode() {
 }
 
 export function flushSyncCallbacks() {
+  // 如果当前没有在刷新同步队列，并且同步队列不为空
   if (!isFlushingSyncQueue && syncQueue !== null) {
-    // Prevent re-entrance.
+    // 防止重新进入该函数
     isFlushingSyncQueue = true;
     let i = 0;
+    // 保存当前的更新优先级
     const previousUpdatePriority = getCurrentUpdatePriority();
     try {
-      const isSync = true;
-      const queue = syncQueue;
-      // TODO: Is this necessary anymore? The only user code that runs in this
-      // queue is in the render or commit phases.
+      const isSync = true; // 标识这是一个同步操作
+      const queue = syncQueue; // 获取当前的同步队列
+      // 将当前更新优先级设置为离散事件优先级
       setCurrentUpdatePriority(DiscreteEventPriority);
+      // 逐个执行队列中的回调函数
       for (; i < queue.length; i++) {
         let callback = queue[i];
+        // 如果回调函数返回新的回调，则继续执行
         do {
           callback = callback(isSync);
         } while (callback !== null);
       }
+      // 清空同步队列
       syncQueue = null;
       includesLegacySyncCallbacks = false;
     } catch (error) {
-      // If something throws, leave the remaining callbacks on the queue.
+      // 如果执行过程中抛出错误，将剩余的回调保留在队列中
       if (syncQueue !== null) {
         syncQueue = syncQueue.slice(i + 1);
       }
-      // Resume flushing in the next tick
+      // 在下一个 tick 中恢复刷新
       scheduleCallback(ImmediatePriority, flushSyncCallbacks);
       throw error;
     } finally {
+      // 恢复之前的更新优先级
       setCurrentUpdatePriority(previousUpdatePriority);
+      // 标记同步队列刷新完成
       isFlushingSyncQueue = false;
     }
   }

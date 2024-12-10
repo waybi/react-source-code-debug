@@ -1,9 +1,9 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import './index.css';
-import App from './App';
+import React from "react";
+import ReactDOM from "react-dom";
+import "./index.css";
+import App from "./App";
 
-const root = document.getElementById('root')
+const root = document.getElementById("root");
 
 // Concurrent mode
 ReactDOM.createRoot(root).render(<App />);
