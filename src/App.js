@@ -4,6 +4,7 @@ import LanesDemo from "./components/LanesDemo";
 import AppSibling from "./components/AppSibling";
 import TasksWithDifferentPriorities from "./components/TasksWithDifferentPriorities";
 import SchedulerTask from "./components/SchedulerTask";
+import SchedulerTask1 from "./components/SchedulerTask1";
 import Concurrent from "./components/ConcurrentInput";
 import { Diff } from "./components/Diff";
 import PropsDiff from "./components/PropsDiff";
@@ -34,7 +35,8 @@ function App() {
   // );
 
   // Scheduler调度任务与用户交互
-  // return <SchedulerTask/>
+  return <SchedulerTask />;
+  // return <SchedulerTask1 />;
 
   // 高优先级插队
   // return <TasksWithDifferentPriorities />;
@@ -43,7 +45,7 @@ function App() {
   // return <ContextDemo/>
 
   // diff 算法
-  return <Diff />;
+  // return <Diff />;
 }
 
 export default App;
