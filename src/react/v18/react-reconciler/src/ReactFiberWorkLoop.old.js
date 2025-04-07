@@ -520,54 +520,84 @@ function requestRetryLane(fiber: Fiber) {
   return claimNextRetryLane();
 }
 
+/**
+ * scheduleUpdateOnFiber - React更新调度的核心函数
+ * 
+ * 该函数负责将Fiber节点的更新标记到根节点，并根据优先级安排调度。
+ * 它是连接React应用状态变化与实际DOM更新的关键环节。
+ * 
+ * @param {Fiber} fiber - 需要更新的Fiber节点，通常是触发更新的组件对应的Fiber
+ * @param {Lane} lane - 本次更新的优先级，决定了该更新在多个并发更新中的处理顺序
+ * @param {number} eventTime - 事件发生的时间戳，用于计算更新的过期时间
+ * @returns {FiberRoot|null} - 返回更新对应的根节点，如果找不到根节点则返回null
+ */
 export function scheduleUpdateOnFiber(
   fiber: Fiber, // 需要更新的Fiber节点
   lane: Lane, // 更新的优先级
   eventTime: number // 事件发生的时间
 ): FiberRoot | null {
-  // 返回更新的根节点或null
-  checkForNestedUpdates(); // 检查是否有嵌套更新
+  // 检查是否存在嵌套更新（如在render函数中调用setState），防止无限循环更新
+  checkForNestedUpdates();
 
+  // 开发环境下的检查：确保不在useInsertionEffect钩子内调度更新
+  // useInsertionEffect设计用于CSS-in-JS库插入样式，不应该触发React更新
   if (__DEV__) {
     if (isRunningInsertionEffect) {
-      console.error("useInsertionEffect must not schedule updates."); // 开发模式下，如果正在运行插入效果，抛出错误
+      console.error("useInsertionEffect must not schedule updates.");
     }
   }
 
-  const root = markUpdateLaneFromFiberToRoot(fiber, lane); // 标记从当前Fiber到根节点的更新优先级
+  // 从当前Fiber节点开始，向上遍历至根节点，同时标记路径上所有节点的更新优先级
+  // 这个过程会更新fiber.lanes和所有父节点的childLanes，确保更新可以被正确追踪
+  const root = markUpdateLaneFromFiberToRoot(fiber, lane);
+  
+  // 如果找不到根节点（极少数情况），则终止更新
   if (root === null) {
-    return null; // 如果没有找到根节点，返回null
+    return null;
   }
 
+  // 开发环境下，检测是否在执行useEffect回调期间触发了更新
+  // 这有助于识别可能导致性能问题的模式，如在useEffect中无条件调用setState
   if (__DEV__) {
     if (isFlushingPassiveEffects) {
-      didScheduleUpdateDuringPassiveEffects = true; // 开发模式下，如果正在刷新被动效果，标记已调度更新
+      didScheduleUpdateDuringPassiveEffects = true;
     }
   }
 
-  // 标记根节点有一个待处理的更新
+  // 在根节点上标记有一个待处理的更新
+  // 这会将当前更新的lane添加到root.pendingLanes中，并处理过期时间和挂起的交互
+  // pendingLanes是确定下一次渲染要处理哪些优先级的关键
   markRootUpdated(root, lane, eventTime);
 
+  // 处理渲染阶段更新（在组件render函数执行期间触发的更新）
   if (
-    (executionContext & RenderContext) !== NoLanes && // 如果在渲染阶段
-    root === workInProgressRoot // 并且当前根节点是正在进行工作的根节点
+    (executionContext & RenderContext) !== NoLanes && // 检查当前是否在渲染阶段
+    root === workInProgressRoot // 确认当前根节点就是正在构建的工作中根节点
   ) {
-    warnAboutRenderPhaseUpdatesInDEV(fiber); // 开发模式下，警告在渲染阶段调度更新
+    // 开发模式下，对渲染阶段更新发出警告（如在render中调用setState）
+    // 这种模式在严格模式下会导致组件渲染两次，可能引起问题
+    warnAboutRenderPhaseUpdatesInDEV(fiber);
 
-    // 追踪在渲染阶段更新的优先级
+    // 将当前更新的优先级合并到渲染阶段更新的优先级集合中
+    // 这些优先级会在当前渲染完成后立即处理，而不是等待下一次渲染
     workInProgressRootRenderPhaseUpdatedLanes = mergeLanes(
       workInProgressRootRenderPhaseUpdatedLanes,
       lane
     );
   } else {
-    // 这是一个正常的更新，从渲染阶段外部调度
+    // 这是一个正常的更新，从渲染阶段外部调度（如事件处理函数、异步回调等）
+    
+    // 如果启用了更新追踪功能且开发者工具存在，记录此更新信息
+    // 这有助于开发工具展示组件的更新来源和时间线
     if (enableUpdaterTracking) {
       if (isDevToolsPresent) {
-        addFiberToLanesMap(root, fiber, lane); // 如果启用了更新追踪，并且存在开发工具，将Fiber添加到优先级映射中
+        addFiberToLanesMap(root, fiber, lane);
       }
     }
 
-    warnIfUpdatesNotWrappedWithActDEV(fiber); // 开发模式下，警告未使用`act`包裹的更新
+    // 开发模式下，检查测试环境中的更新是否被act()包裹
+    // React Testing Library的act()确保所有更新都在断言前完成
+    warnIfUpdatesNotWrappedWithActDEV(fiber);
 
     if (enableProfilerTimer && enableProfilerNestedUpdateScheduledHook) {
       if (

@@ -189,59 +189,97 @@ function flushWork(hasTimeRemaining, initialTime) {
   }
 }
 
+/**
+ * workLoop 是 Scheduler 的核心循环函数，负责按优先级执行任务队列中的任务
+ * @param {boolean} hasTimeRemaining - 当前时间片是否还有剩余时间
+ * @param {number} initialTime - 当前的时间戳，用于计算任务是否过期
+ * @returns {boolean} - 返回是否还有更多任务需要处理
+ */
 function workLoop(hasTimeRemaining, initialTime) {
+  // 初始化当前时间为传入的初始时间
   let currentTime = initialTime;
+  // 检查并将已到期的定时任务转移到任务队列
   advanceTimers(currentTime);
+  // 获取任务队列中优先级最高的任务
   currentTask = peek(taskQueue);
+  
+  // 当任务队列不为空且调度器未被暂停时，循环处理任务
   while (
     currentTask !== null &&
     !(enableSchedulerDebugging && isSchedulerPaused)
   ) {
+    // 如果当前任务还没过期，并且时间片已用完或应该让出主线程，则中断循环
     if (
       currentTask.expirationTime > currentTime &&
       (!hasTimeRemaining || shouldYieldToHost())
     ) {
-      // This currentTask hasn't expired, and we've reached the deadline.
+      console.log('让出控制权!!!!!!!!!!!!!!!!!');
+      // 这个任务还没过期，但我们已经达到了时间片的截止时间，需要让出控制权
       break;
     }
+    
+    // 获取任务的回调函数
     const callback = currentTask.callback;
     if (typeof callback === "function") {
+      // 将任务的回调设为 null，表示正在执行
       currentTask.callback = null;
+      // 设置当前优先级为任务的优先级
       currentPriorityLevel = currentTask.priorityLevel;
+      // 判断任务是否已经超时
       const didUserCallbackTimeout = currentTask.expirationTime <= currentTime;
+      
+      // 如果启用了性能分析，标记任务开始运行
       if (enableProfiling) {
         markTaskRun(currentTask, currentTime);
       }
+      
+      // 执行回调函数，并获取可能的延续回调
       const continuationCallback = callback(didUserCallbackTimeout);
+      // 更新当前时间
       currentTime = getCurrentTime();
+      
+      // 如果回调返回一个函数，表示任务需要继续执行
       if (typeof continuationCallback === "function") {
+        // 将返回的函数设为新的回调，任务将在下一个时间片继续执行
         currentTask.callback = continuationCallback;
+        // 如果启用了性能分析，标记任务让出控制权
         if (enableProfiling) {
           markTaskYield(currentTask, currentTime);
         }
       } else {
+        // 任务已完成
+        // 如果启用了性能分析，标记任务完成
         if (enableProfiling) {
           markTaskCompleted(currentTask, currentTime);
           currentTask.isQueued = false;
         }
+        // 如果当前任务仍然是队列的顶部任务，将其从队列中移除
         if (currentTask === peek(taskQueue)) {
           pop(taskQueue);
         }
       }
+      // 再次检查并将已到期的定时任务转移到任务队列
       advanceTimers(currentTime);
     } else {
+      // 如果回调不是函数（可能是 null），直接从队列中移除任务
       pop(taskQueue);
     }
+    // 获取下一个优先级最高的任务
     currentTask = peek(taskQueue);
   }
-  // Return whether there's additional work
+  
+  // 返回是否还有更多任务需要处理
   if (currentTask !== null) {
+    // 任务队列中还有任务，返回 true
     return true;
   } else {
+    // 任务队列为空，检查定时器队列
     const firstTimer = peek(timerQueue);
     if (firstTimer !== null) {
+      // 如果定时器队列中有任务，安排一个超时回调来处理它
       requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime);
     }
+    // 当前没有更多任务需要立即处理
     return false;
   }
 }
@@ -365,6 +403,8 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
    */
   var expirationTime = startTime + timeout;
 
+  console.log('expirationTime::::::::: ', expirationTime);
+  
   /**
    * 创建一个新的任务对象。
    * sortIndex 用于任务排序，值越小的任务优先级越高。
@@ -487,6 +527,7 @@ let needsPaint = false;
 
 function shouldYieldToHost() {
   const timeElapsed = getCurrentTime() - startTime;
+  console.log('timeElapsed:::::::::', timeElapsed);
   if (timeElapsed < frameInterval) {
     // The main thread has only been blocked for a really short amount of time;
     // smaller than a single frame. Don't yield yet.

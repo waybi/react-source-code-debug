@@ -11,6 +11,8 @@ import PropsDiff from "./components/PropsDiff";
 import Hooks from "./components/Hooks";
 import EventDemo from "./components/EventDemo";
 import ContextDemo from "./components/Context";
+import UpdateQueueDemo from "./components/UpdateQueue/UpdateQueue";
+
 import "./App.css";
 
 // propsDiff
@@ -35,8 +37,11 @@ function App() {
   // );
 
   // Scheduler调度任务与用户交互
-  return <SchedulerTask />;
-  // return <SchedulerTask1 />;
+  // return <SchedulerTask />;
+  return <SchedulerTask1 />;
+
+  // updateQueue
+  // return <UpdateQueueDemo/>
 
   // 高优先级插队
   // return <TasksWithDifferentPriorities />;
