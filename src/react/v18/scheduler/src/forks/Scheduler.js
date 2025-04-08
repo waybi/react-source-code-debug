@@ -240,6 +240,7 @@ function workLoop(hasTimeRemaining, initialTime) {
       
       // 如果回调返回一个函数，表示任务需要继续执行
       if (typeof continuationCallback === "function") {
+        console.log('continuationCallback:::::::::: ', continuationCallback);
         // 将返回的函数设为新的回调，任务将在下一个时间片继续执行
         currentTask.callback = continuationCallback;
         // 如果启用了性能分析，标记任务让出控制权
@@ -403,8 +404,6 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
    */
   var expirationTime = startTime + timeout;
 
-  console.log('expirationTime::::::::: ', expirationTime);
-  
   /**
    * 创建一个新的任务对象。
    * sortIndex 用于任务排序，值越小的任务优先级越高。
@@ -527,7 +526,6 @@ let needsPaint = false;
 
 function shouldYieldToHost() {
   const timeElapsed = getCurrentTime() - startTime;
-  console.log('timeElapsed:::::::::', timeElapsed);
   if (timeElapsed < frameInterval) {
     // The main thread has only been blocked for a really short amount of time;
     // smaller than a single frame. Don't yield yet.

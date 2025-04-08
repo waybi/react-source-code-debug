@@ -1016,6 +1016,8 @@ function performConcurrentWorkOnRoot(root, didTimeout) {
 
   ensureRootIsScheduled(root, now());
   if (root.callbackNode === originalCallbackNode) {
+    console.log('performConcurrentWorkOnRoot::::::::::::');
+    
     // The task node scheduled for this root is the same one that's
     // currently executed. Need to return a continuation.
     return performConcurrentWorkOnRoot.bind(null, root);
