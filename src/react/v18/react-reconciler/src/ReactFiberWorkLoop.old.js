@@ -886,6 +886,8 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
 // This is the entry point for every concurrent task, i.e. anything that
 // goes through Scheduler.
 function performConcurrentWorkOnRoot(root, didTimeout) {
+  console.log('performConcurrentWorkOnRoot::::::::::::::::::::::::::::::');
+  
   if (enableProfilerTimer && enableProfilerNestedUpdatePhase) {
     resetNestedUpdateFlag();
   }
@@ -1016,8 +1018,7 @@ function performConcurrentWorkOnRoot(root, didTimeout) {
 
   ensureRootIsScheduled(root, now());
   if (root.callbackNode === originalCallbackNode) {
-    console.log('performConcurrentWorkOnRoot::::::::::::');
-    
+    console.log('root.callbackNode === originalCallbackNode::::::::::::');
     // The task node scheduled for this root is the same one that's
     // currently executed. Need to return a continuation.
     return performConcurrentWorkOnRoot.bind(null, root);

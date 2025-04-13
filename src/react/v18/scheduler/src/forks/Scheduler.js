@@ -148,6 +148,8 @@ function handleTimeout(currentTime) {
 }
 
 function flushWork(hasTimeRemaining, initialTime) {
+  console.log('flushWork::::::::::::::');
+  
   if (enableProfiling) {
     markSchedulerUnsuspended(initialTime);
   }
@@ -196,6 +198,8 @@ function flushWork(hasTimeRemaining, initialTime) {
  * @returns {boolean} - 返回是否还有更多任务需要处理
  */
 function workLoop(hasTimeRemaining, initialTime) {
+  console.log('workLoop::::::::::::::');
+  
   // 初始化当前时间为传入的初始时间
   let currentTime = initialTime;
   // 检查并将已到期的定时任务转移到任务队列
@@ -348,6 +352,8 @@ function unstable_wrapCallback(callback) {
 }
 
 function unstable_scheduleCallback(priorityLevel, callback, options) {
+  console.log('unstable_scheduleCallback:::::::::: ', callback);
+  
   // 获取当前时间戳
   var currentTime = getCurrentTime();
   var startTime;
@@ -600,6 +606,7 @@ function forceFrameRate(fps) {
 }
 
 const performWorkUntilDeadline = () => {
+  console.log('performWorkUntilDeadline::::::::::');
   if (scheduledHostCallback !== null) {
     const currentTime = getCurrentTime();
     // Keep track of the start time so we can measure how long the main thread
@@ -620,6 +627,7 @@ const performWorkUntilDeadline = () => {
       if (hasMoreWork) {
         // If there's more work, schedule the next message event at the end
         // of the preceding one.
+        console.log('schedulePerformWorkUntilDeadline:::::::::: ');
         schedulePerformWorkUntilDeadline();
       } else {
         isMessageLoopRunning = false;
@@ -667,6 +675,7 @@ if (typeof localSetImmediate === "function") {
 }
 
 function requestHostCallback(callback) {
+  console.log('requestHostCallback::::::::::');
   scheduledHostCallback = callback;
   if (!isMessageLoopRunning) {
     isMessageLoopRunning = true;
